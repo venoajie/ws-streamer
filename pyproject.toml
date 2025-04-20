@@ -1,10 +1,10 @@
 [project]
 name = "ws-streamer"
-version = "0.1.913"
+version = "0.1.914"
 authors = [
   { name="ven.ajie", email="venoajie@gmail.com" },
 ]
-description = "Add your description here"
+description = "app to relay data from exchanges"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies =  [ 
