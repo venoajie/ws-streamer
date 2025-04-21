@@ -1,6 +1,6 @@
 [project]
 name = "ws-streamer"
-version = "0.1.931"
+version = "0.1.937"
 authors = [
   { name="ven.ajie", email="venoajie@gmail.com" },
 ]

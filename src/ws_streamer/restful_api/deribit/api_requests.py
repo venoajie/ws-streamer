@@ -15,14 +15,22 @@ from ws_streamer.messaging import telegram_bot as tlgrm
 from ws_streamer.utilities import string_modification as str_mod, time_modification as time_mod
 
 
-def parse_dotenv(sub_account: str) -> str:
-    return config.main_dotenv(sub_account)
+def parse_dotenv(
+    sub_account: str,
+    filename: str = ".env",
+) -> str:
+    
+    return config.main_dotenv(
+        sub_account,
+        filename,
+        )
 
 
 async def private_connection(
     sub_account: str,
     endpoint: str,
     params: str,
+    config_path: str,
     connection_url: str = "https://www.deribit.com/api/v2/",
 ) -> None:
 
@@ -38,8 +46,12 @@ async def private_connection(
         "params": params,
     }
     
-    client_id: str = parse_dotenv(sub_account)["client_id"]
-    client_secret: str = config_oci.get_oci_key(parse_dotenv(sub_account)["key_ocid"])
+    from loguru import logger as log
+    
+    parsed=parse_dotenv (sub_account,config_path)
+    log.warning(f"parse_dotenv(sub_account) {parsed} sub_account {sub_account}")
+    client_id: str = parsed["client_id"]
+    client_secret: str = config_oci.get_oci_key(parsed["key_ocid"])
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -204,6 +216,7 @@ class SendApiRequest:
     """ """
 
     sub_account_id: str
+    filename: str
 
     async def send_order(
         self,
@@ -264,6 +277,7 @@ class SendApiRequest:
                 self.sub_account_id,
                 endpoint=endpoint,
                 params=params,
+                config_path=self.filename,
             )
 
         return result
@@ -283,6 +297,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         return result_open_order["result"]
@@ -383,6 +398,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         return result_sub_account["result"]
@@ -516,6 +532,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         return result_sub_account["result"]
@@ -539,6 +556,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         return [] if user_trades == [] else user_trades["result"]["trades"]
@@ -566,6 +584,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         return [] if user_trades == [] else user_trades["result"]["trades"]
@@ -581,6 +600,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         return result
@@ -617,6 +637,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         try:
@@ -645,6 +666,7 @@ class SendApiRequest:
             self.sub_account_id,
             endpoint=endpoint,
             params=params,
+                config_path=self.filename,
         )
 
         return result

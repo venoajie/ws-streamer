@@ -5,13 +5,6 @@ from configparser import ConfigParser
 from ws_streamer.utilities import system_tools
 
 
-def catch_error(error, idle: int = None) -> list:
-    """ """
-    from utilities import system_tools
-
-    system_tools.catch_error_message(error, idle)
-
-
 class Read_Configuration:
     """
     # Read .env file
@@ -21,7 +14,12 @@ class Read_Configuration:
         self.params = None
         self.conn = None
 
-    def config(self, filename: str, section: str) -> dict:
+    def config(
+        self, 
+        filename: str, 
+        section: str,
+        ) -> dict:
+        
         # create parser
         parser = ConfigParser()
 
@@ -35,6 +33,7 @@ class Read_Configuration:
             # check file section
             if parser.has_section(section):
                 params = parser.items(section)
+        
                 for param in params:
                     parameters[param[0]] = param[1]
 
@@ -47,10 +46,13 @@ class Read_Configuration:
         return parameters
 
 
-def main_dotenv(header: str = "None", filename: str = ".env") -> dict:
+def main_dotenv(
+    header: str = "None", 
+    config_path: str = ".env",
+    ) -> dict:
+    
     """
-    https://www.python-engineer.com/posts/run-python-github-actions/
-    """
+    # Read .env file"""
 
     # Initialize credentials to None
     credentials = None
@@ -58,7 +60,7 @@ def main_dotenv(header: str = "None", filename: str = ".env") -> dict:
     try:
         # Set the filename
         # filename = ".env"
-        config_path = system_tools.provide_path_for_file(filename)
+#        config_path = system_tools.provide_path_for_file(filename)
 
         # Create a Read_Configuration object
         Connection = Read_Configuration()
@@ -80,18 +82,3 @@ def main_dotenv(header: str = "None", filename: str = ".env") -> dict:
         # log.info (credentials)
 
     return credentials
-
-
-if __name__ == "__main__":
-    try:
-        test = main_dotenv("telegram-failed_order")
-        print(test)
-
-        test = main_dotenv("deribit-147691")
-        print(test)
-
-    except KeyboardInterrupt:
-        catch_error(KeyboardInterrupt)
-
-    except Exception as error:
-        catch_error(error, 30)
