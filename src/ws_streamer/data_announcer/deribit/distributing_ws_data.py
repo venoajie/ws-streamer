@@ -8,15 +8,11 @@ from loguru import logger as log
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-from db_management import redis_client, sqlite_management as db_mgt
-from messaging import telegram_bot as tlgrm
-from transaction_management.deribit import (
-    allocating_ohlc,
-    api_requests,
-    get_instrument_summary,
-    processing_orders,
-)
-from utilities import caching, pickling, string_modification as str_mod, system_tools
+from ws_streamer.db_management import redis_client, sqlite_management as db_mgt
+from ws_streamer.messaging import telegram_bot as tlgrm
+from ws_streamer.restful_api.deribit import api_requests
+from ws_streamer.data_announcer.deribit import get_instrument_summary, allocating_ohlc
+from ws_streamer.utilities import caching, pickling, string_modification as str_mod, system_tools
 
 
 async def caching_distributing_data(
@@ -154,7 +150,7 @@ async def caching_distributing_data(
                             log.critical(message_channel)
                             log.warning(data)
 
-                            await processing_orders.updating_sub_account(
+                            await updating_sub_account(
                                 client_redis,
                                 orders_cached,
                                 positions_cached,
@@ -552,3 +548,51 @@ async def chart_trades_in_message_channel(
         chart_low_high_tick_channel,
         result,
     )
+
+
+async def updating_sub_account(
+    client_redis: object,
+    orders_cached: list,
+    positions_cached: list,
+    query_trades: str,
+    subaccounts_details_result: list,
+    sub_account_cached_channel: str,
+    message_byte_data: dict,
+) -> None:
+
+    if subaccounts_details_result:
+
+        open_orders = [o["open_orders"] for o in subaccounts_details_result]
+
+        if open_orders:
+            caching.update_cached_orders(
+                orders_cached,
+                open_orders[0],
+                "rest",
+            )
+        positions = [o["positions"] for o in subaccounts_details_result]
+
+        if positions:
+            caching.positions_updating_cached(
+                positions_cached,
+                positions[0],
+                "rest",
+            )
+
+    my_trades_active_all = await db_mgt.executing_query_with_return(query_trades)
+
+    data = dict(
+        positions=positions_cached,
+        open_orders=orders_cached,
+        my_trades=my_trades_active_all,
+    )
+
+    message_byte_data["params"].update({"channel": sub_account_cached_channel})
+    message_byte_data["params"].update({"data": data})
+
+    await redis_client.publishing_result(
+        client_redis,
+        sub_account_cached_channel,
+        message_byte_data,
+    )
+

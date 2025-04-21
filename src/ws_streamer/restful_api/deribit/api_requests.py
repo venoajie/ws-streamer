@@ -37,7 +37,7 @@ async def private_connection(
         "method": f"{endpoint}",
         "params": params,
     }
-
+    
     client_id: str = parse_dotenv(sub_account)["client_id"]
     client_secret: str = config_oci.get_oci_key(parse_dotenv(sub_account)["key_ocid"])
 
