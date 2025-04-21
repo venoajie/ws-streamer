@@ -3,12 +3,13 @@
 # built ins
 import asyncio
 
-from transaction_management.deribit.api_requests import get_instruments
-from utilities.pickling import read_data
-from utilities.string_modification import remove_double_brackets_in_list
-from utilities.system_tools import provide_path_for_file
-
 # user defined formula
+from ws_streamer.restful_api.deribit.api_requests import get_instruments
+from ws_streamer.utilities import (
+    pickling,
+    string_modification as str_mod,
+    system_tools,
+)
 
 
 def get_instruments_kind(
@@ -40,9 +41,9 @@ def get_instruments_kind(
         result = result["result"]
 
     else:
-        my_path_instruments = provide_path_for_file("instruments", currency)
+        my_path_instruments = system_tools.provide_path_for_file("instruments", currency)
 
-        instruments_raw = read_data(my_path_instruments)
+        instruments_raw = pickling.read_data(my_path_instruments)
 
         result = instruments_raw[0]["result"]
 
@@ -94,7 +95,7 @@ async def get_futures_for_active_currencies(
     for instr in instruments_holder_place:
         instruments_holder_plc.append(instr)
 
-    return remove_double_brackets_in_list(instruments_holder_plc)
+    return str_mod.remove_double_brackets_in_list(instruments_holder_plc)
 
 
 async def get_futures_instruments(

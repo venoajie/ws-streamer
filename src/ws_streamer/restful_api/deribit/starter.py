@@ -5,13 +5,10 @@ import asyncio
 from loguru import logger as log
 
 # user defined formulas
-from db_management import sqlite_management as db_mgt
-from messaging import telegram_bot as tlgrm
-from transaction_management.deribit import (
-    api_requests,
-    cancelling_active_orders,
-)
-from utilities import (
+from ws_streamer.db_management import sqlite_management as db_mgt
+from ws_streamer.messaging import telegram_bot as tlgrm
+from ws_streamer.restful_api.deribit import api_requests
+from ws_streamer.utilities import (
     pickling,
     string_modification as str_mod,
     system_tools,
@@ -86,13 +83,6 @@ async def initial_procedures(
             query_trades_active_where = f"WHERE instrument_name LIKE '%{currency}%'"
 
             query_trades = f"{query_trades_active_basic} {query_trades_active_where}"
-
-            await cancelling_active_orders.cancel_the_cancellables(
-                private_data,
-                order_db_table,
-                currency,
-                cancellable_strategies,
-            )
 
             my_trades_currency = await db_mgt.executing_query_with_return(query_trades)
 

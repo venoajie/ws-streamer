@@ -231,3 +231,67 @@ async def querying_data(
             f"redis qurying result - {error}",
             "general_error",
         )
+
+
+async def publishing_specific_purposes(
+    purpose,
+    message,
+    redis_channels: list = None,
+    client_redis: object = None,
+) -> None:
+    """
+    purposes:
+    + porfolio
+    + sub_account_update
+    + trading_update
+
+        my_trades_channel:
+        + send messages that "high probabilities" trade DB has changed
+            sender: redis publisher + sqlite insert, update & delete
+        + updating trading cache at end user
+            consumer: fut spread, hedging, cancelling
+        + checking data integrity
+            consumer: app data cleaning/size reconciliation
+
+        sub_account_channel:
+        + send messages that sub_account has changed
+            sender: deribit API module
+        + updating sub account cache at end user
+            consumer: fut spread, hedging, cancelling
+        + checking data integrity
+            consumer: app data cleaning/size reconciliation
+
+    """
+
+    if not client_redis:
+        pool = aioredis.ConnectionPool.from_url(
+            "redis://localhost",
+            port=6379,
+            db=0,
+            protocol=3,
+            decode_responses=True,
+        )
+        client_redis: object = aioredis.Redis.from_pool(pool)
+
+    if not redis_channels:
+
+        from utilities.system_tools import get_config_tomli
+
+        # registering strategy config file
+        file_toml = "config_strategies.toml"
+
+        # parsing config file
+        config_app = get_config_tomli(file_toml)
+
+        # get redis channels
+        redis_channels: dict = config_app["redis_channels"][0]
+
+    if purpose == "sqlite_record_updating":
+        channel: str = redis_channels["sqlite_record_updating"]
+        message["params"].update({"channel": channel})
+
+    await publishing_result(
+        client_redis,
+        channel,
+        message,
+    )

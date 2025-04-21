@@ -10,9 +10,9 @@ from dataclassy import dataclass
 from loguru import logger as log
 
 # user defined formula
-from configuration import config, config_oci
-from messaging import telegram_bot as tlgrm
-from utilities import string_modification as str_mod, time_modification as time_mod
+from ws_streamer.configuration import config, config_oci
+from ws_streamer.messaging import telegram_bot as tlgrm
+from ws_streamer.utilities import string_modification as str_mod, time_modification as time_mod
 
 
 def parse_dotenv(sub_account: str) -> str:
