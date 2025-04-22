@@ -165,12 +165,9 @@ class StreamingAccountData:
                                 
                                 if message_params:
 
-                                    print(f"message_params AAAAAAAA {message_params}")
                                     message_params.update({"exchange": exchange})
                                     message_params.update({"account_id": self.sub_account_id})
                                         
-                                    print(f"message_params {message_params}")
-
                                     # queing message to dispatcher
                                     await queue_general.put(message_params)
 

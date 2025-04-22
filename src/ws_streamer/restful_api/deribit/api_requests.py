@@ -10,27 +10,15 @@ from dataclassy import dataclass
 from loguru import logger as log
 
 # user defined formula
-from ws_streamer.configuration import config, config_oci
 from ws_streamer.messaging import telegram_bot as tlgrm
 from ws_streamer.utilities import string_modification as str_mod, time_modification as time_mod
 
 
-def parse_dotenv(
-    sub_account: str,
-    filename: str = ".env",
-) -> str:
-    
-    return config.main_dotenv(
-        sub_account,
-        filename,
-        )
-
-
 async def private_connection(
-    sub_account: str,
     endpoint: str,
     params: str,
-    config_path: str,
+    client_id: str,
+    client_secret: str,
     connection_url: str = "https://www.deribit.com/api/v2/",
 ) -> None:
 
@@ -48,10 +36,7 @@ async def private_connection(
     
     from loguru import logger as log
     
-    parsed=parse_dotenv (sub_account,config_path)
-    log.warning(f"parse_dotenv(sub_account) {parsed} sub_account {sub_account}")
-    client_id: str = parsed["client_id"]
-    client_secret: str = config_oci.get_oci_key(parsed["key_ocid"])
+    log.warning(f"client_id {client_id} client_secret {client_secret}")
 
     async with aiohttp.ClientSession() as session:
         async with session.post(
@@ -216,8 +201,9 @@ class SendApiRequest:
     """ """
 
     sub_account_id: str
-    filename: str
-
+    client_id: str
+    client_secret: str
+    
     async def send_order(
         self,
         side: str,
@@ -274,10 +260,10 @@ class SendApiRequest:
             endpoint: str = get_end_point_based_on_side(side)
 
             result = await private_connection(
-                self.sub_account_id,
-                endpoint=endpoint,
-                params=params,
-                config_path=self.filename,
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
             )
 
         return result
@@ -294,11 +280,11 @@ class SendApiRequest:
         params = {"kind": kind, "type": type}
 
         result_open_order = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
-        )
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
+            )
 
         return result_open_order["result"]
 
@@ -395,11 +381,11 @@ class SendApiRequest:
         params = {"with_portfolio": True}
 
         result_sub_account = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
-        )
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
+            )
 
         return result_sub_account["result"]
 
@@ -529,11 +515,11 @@ class SendApiRequest:
         }
 
         result_sub_account = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
-        )
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
+            )
 
         return result_sub_account["result"]
 
@@ -553,12 +539,12 @@ class SendApiRequest:
         }
 
         user_trades = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
         )
-
+        
         return [] if user_trades == [] else user_trades["result"]["trades"]
 
     async def get_user_trades_by_instrument_and_time(
@@ -581,11 +567,11 @@ class SendApiRequest:
         }
 
         user_trades = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
-        )
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
+            )
 
         return [] if user_trades == [] else user_trades["result"]["trades"]
 
@@ -597,11 +583,11 @@ class SendApiRequest:
         params = {"detailed": False}
 
         result = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
-        )
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
+            )
 
         return result
 
@@ -634,11 +620,11 @@ class SendApiRequest:
         }
 
         result_transaction_log_to_result = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
-        )
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
+            )
 
         try:
             result = result_transaction_log_to_result["result"]
@@ -663,11 +649,11 @@ class SendApiRequest:
         params = {"order_id": order_id}
 
         result = await private_connection(
-            self.sub_account_id,
-            endpoint=endpoint,
-            params=params,
-                config_path=self.filename,
-        )
+            endpoint,
+            params,
+            self.client_id,
+            self.client_secret,        
+            )
 
         return result
 
