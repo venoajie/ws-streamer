@@ -104,9 +104,7 @@ class StreamingDataBinance:
                                 
                                 data.update({"exchange": exchange})
                                 data.update({"account_id": self.sub_account_id})
-                                    
-                                log.warning(f"data {data}")
-
+                          
                                 # queing message to dispatcher
                                 await queue_general.put(data)
 
