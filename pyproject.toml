@@ -1,6 +1,6 @@
 [project]
 name = "ws-streamer"
-version = "0.1.942"
+version = "0.1.945"
 authors = [
   { name="ven.ajie", email="venoajie@gmail.com" },
 ]
@@ -13,7 +13,7 @@ dependencies =  [
     "ccxt==4.4.74",
     "dataclassy==1.0.1",
     "loguru==0.7.3",
-    "oci==3.54.4",
+    "oci==2.150.2",
     "httpx==0.27.2",
     "orjson==3.10.15",
     "python-telegram-bot==22.0",
