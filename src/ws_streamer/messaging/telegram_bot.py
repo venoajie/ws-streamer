@@ -4,12 +4,10 @@ import asyncio
 # import orjson
 import httpx
 
-# user defined formula
-from ws_streamer.configuration import config
-
-
 async def private_connection(
     endpoint: str,
+    client_id: str,
+    bot_chatID: str,
     connection_url: str = "https://api.telegram.org/bot",
 ) -> None:
 
@@ -21,40 +19,15 @@ async def private_connection(
 
 
 async def telegram_bot_sendtext(
-    bot_message: str, purpose: str = "general_error"
+    bot_token: str,
+    bot_chatID: str,
+    bot_message: str, 
+    purpose: str = "general_error",
 ) -> str:
     """
     # simple telegram
     #https://stackoverflow.com/questions/32423837/telegram-bot-how-to-get-a-group-chat-id
     """
-
-    try:
-        bot_token = config.main_dotenv("telegram-failed_order")["bot_token"]
-
-    except:
-        bot_token = config.main_dotenv("telegram-failed_order")["BOT_TOKEN"]
-
-    if purpose == "failed_order":
-        try:
-            try:
-                bot_chatID = config.main_dotenv("telegram-failed_order")[
-                    "BOT_CHATID_FAILED_ORDER"
-                ]
-            except:
-                bot_chatID = config.main_dotenv("telegram-failed_order")["bot_chatID"]
-        except:
-            bot_chatID = config.main_dotenv("telegram-failed_order")["bot_chatid"]
-
-    if purpose == "general_error":
-        try:
-            try:
-                bot_chatID = config.main_dotenv("telegram-general_error")["bot_chatid"]
-            except:
-                bot_chatID = config.main_dotenv("telegram-general_error")["bot_chatID"]
-        except:
-            bot_chatID = config.main_dotenv("telegram-general_error")[
-                "BOT_CHATID_GENERAL_ERROR"
-            ]
 
     connection_url = "https://api.telegram.org/bot"
 
@@ -66,4 +39,9 @@ async def telegram_bot_sendtext(
         + str(bot_message)
     )
 
-    return await private_connection(endpoint=endpoint, connection_url=connection_url)
+    return await private_connection(
+        endpoint=endpoint,
+        client_id=bot_token,
+        bot_chatID=bot_chatID,
+        connection_url=connection_url,
+        )

@@ -88,6 +88,5 @@ async def abnormal_trading_notices_in_message_channel(
 
     await redis_client.publishing_result(
         pipe,
-        abnormal_trading_notices_channel,
         result,
     )

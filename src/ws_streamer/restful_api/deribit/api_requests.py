@@ -1,3 +1,17 @@
+"""
+why aiohttp over httpx?
+    - Our module is fully using asynchronous which is aiohttp spesialization 
+    - has more mature asyncio support than httpx
+    - aiohttp is more suitable for applications that require high concurrency and low latency, such as web scraping or real-time data processing.
+
+references:
+    - https://github.com/encode/httpx/issues/3215#issuecomment-2157885121
+    - https://github.com/encode/httpx/discussions/3100
+    - https://brightdata.com/blog/web-data/requests-vs-httpx-vs-aiohttp
+
+
+"""
+
 # built ins
 import asyncio
 from typing import Dict
@@ -14,12 +28,66 @@ from ws_streamer.messaging import telegram_bot as tlgrm
 from ws_streamer.utilities import string_modification as str_mod, time_modification as time_mod
 
 
+async def get_connected(
+    endpoint: str,
+    connection_url: str,
+    client_id: str= None,
+    client_secret: str= None,
+    params: str = None,
+    ) -> None:
+    
+    async with aiohttp.ClientSession() as session:
+        
+        connection_endpoint = connection_url + endpoint
+
+        if client_id:
+            
+            if "telegram" in connection_url: 
+                
+                response = await session.get(connection_url + endpoint)
+            
+            if "deribit" in connection_url: 
+
+                id = str_mod.id_numbering(
+                    endpoint,
+                    endpoint,
+                )
+
+                payload: Dict = {
+                    "jsonrpc": "2.0",
+                    "id": id,
+                    "method": f"{endpoint}",
+                    "params": params,
+                }
+                
+                async with session.post(
+                    connection_endpoint,
+                    auth=BasicAuth(client_id, client_secret),
+                    json=payload,
+                ) as response:
+
+                    # RESToverHTTP Status Code
+                    status_code: int = response.status
+
+                    # RESToverHTTP Response Content
+                    response: Dict = await response.json()
+
+        else:
+            
+                async with session.get(connection_endpoint) as response:
+
+                    # RESToverHTTP Response Content
+                    response: Dict = await response.json()
+
+        return response
+        
+
 async def private_connection(
     endpoint: str,
-    params: str,
     client_id: str,
     client_secret: str,
     connection_url: str = "https://www.deribit.com/api/v2/",
+    params: str = {},
 ) -> None:
 
     id = str_mod.id_numbering(
@@ -34,10 +102,6 @@ async def private_connection(
         "params": params,
     }
     
-    from loguru import logger as log
-    
-    log.warning(f"client_id {client_id} client_secret {client_secret}")
-
     async with aiohttp.ClientSession() as session:
         async with session.post(
             connection_url + endpoint,
@@ -261,9 +325,9 @@ class SendApiRequest:
 
             result = await private_connection(
             endpoint,
-            params,
             self.client_id,
             self.client_secret,        
+            params,
             )
 
         return result
@@ -281,9 +345,9 @@ class SendApiRequest:
 
         result_open_order = await private_connection(
             endpoint,
-            params,
             self.client_id,
             self.client_secret,        
+            params,
             )
 
         return result_open_order["result"]
@@ -382,9 +446,9 @@ class SendApiRequest:
 
         result_sub_account = await private_connection(
             endpoint,
-            params,
             self.client_id,
             self.client_secret,        
+            params,
             )
 
         return result_sub_account["result"]
@@ -516,9 +580,10 @@ class SendApiRequest:
 
         result_sub_account = await private_connection(
             endpoint,
-            params,
             self.client_id,
-            self.client_secret,        
+            self.client_secret,  
+                        params,
+      
             )
 
         return result_sub_account["result"]
@@ -540,9 +605,10 @@ class SendApiRequest:
 
         user_trades = await private_connection(
             endpoint,
-            params,
             self.client_id,
-            self.client_secret,        
+            self.client_secret,       
+                        params,
+ 
         )
         
         return [] if user_trades == [] else user_trades["result"]["trades"]
@@ -568,9 +634,10 @@ class SendApiRequest:
 
         user_trades = await private_connection(
             endpoint,
-            params,
             self.client_id,
-            self.client_secret,        
+            self.client_secret,   
+                        params,
+     
             )
 
         return [] if user_trades == [] else user_trades["result"]["trades"]
@@ -584,9 +651,9 @@ class SendApiRequest:
 
         result = await private_connection(
             endpoint,
-            params,
             self.client_id,
             self.client_secret,        
+            params,
             )
 
         return result
@@ -621,9 +688,9 @@ class SendApiRequest:
 
         result_transaction_log_to_result = await private_connection(
             endpoint,
-            params,
             self.client_id,
             self.client_secret,        
+            params,
             )
 
         try:
@@ -650,9 +717,9 @@ class SendApiRequest:
 
         result = await private_connection(
             endpoint,
-            params,
             self.client_id,
             self.client_secret,        
+            params,
             )
 
         return result

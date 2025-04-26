@@ -1,22 +1,21 @@
 [project]
 name = "ws-streamer"
-version = "0.1.945"
+version = "0.1.947"
 authors = [
   { name="ven.ajie", email="venoajie@gmail.com" },
 ]
 description = "app to relay data from exchanges"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies =  [ 
+dependencies =  [
+  "aiohttp",
     "aioredis>=2.0.1",
     "aiosqlite==0.21.0",
     "ccxt==4.4.74",
     "dataclassy==1.0.1",
     "loguru==0.7.3",
     "oci==2.150.2",
-    "httpx==0.27.2",
     "orjson==3.10.15",
-    "python-telegram-bot==22.0",
     "redis[hiredis]>=5.2.1",
     "tomli==2.0.2",
     "uvloop>=0.21.0",

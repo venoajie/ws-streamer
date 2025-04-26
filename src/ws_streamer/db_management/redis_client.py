@@ -9,14 +9,10 @@ from dataclassy import dataclass
 import orjson
 
 import redis.asyncio as aioredis
-import json
-
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
-
-from ws_streamer.messaging.telegram_bot import telegram_bot_sendtext
-from ws_streamer.utilities.system_tools import parse_error_message
+from ws_streamer.utilities import system_tools
 
 
 class RedisPubSubManager:
@@ -150,22 +146,22 @@ async def saving_and_publishing_result(
 
     except Exception as error:
 
-        parse_error_message(error)
+        await system_tools.parse_error_message_with_redis(
+            client_redis,
+            error,
+            )
 
-        await telegram_bot_sendtext(
-            f"redis saving and publishing result - {error}",
-            "general_error",
-        )
 
 
 async def publishing_result(
     client_redis: object,
-    channel: str,
     message: dict,
 ) -> None:
     """ """
 
     try:
+        
+        channel = message["channel"]
 
         # publishing message
         await client_redis.publish(
@@ -175,12 +171,10 @@ async def publishing_result(
 
     except Exception as error:
 
-        parse_error_message(error)
-
-        await telegram_bot_sendtext(
-            f"redis publishing result - {error}",
-            "general_error",
-        )
+        await system_tools.parse_error_message_with_redis(
+            client_redis,
+            error,
+            )
 
 
 async def saving_result(
@@ -192,6 +186,8 @@ async def saving_result(
     """ """
 
     try:
+        
+        channel = message["channel"]
 
         await client_redis.hset(
             keys,
@@ -201,12 +197,10 @@ async def saving_result(
 
     except Exception as error:
 
-        parse_error_message(error)
-
-        await telegram_bot_sendtext(
-            f"redis saving result - {error}",
-            "general_error",
-        )
+        await system_tools.parse_error_message_with_redis(
+            client_redis,
+            error,
+            )
 
 
 async def querying_data(
@@ -225,12 +219,10 @@ async def querying_data(
 
     except Exception as error:
 
-        parse_error_message(error)
-
-        await telegram_bot_sendtext(
-            f"redis qurying result - {error}",
-            "general_error",
-        )
+        await system_tools.parse_error_message_with_redis(
+            client_redis,
+            error,
+            )
 
 
 async def publishing_specific_purposes(
@@ -263,35 +255,45 @@ async def publishing_specific_purposes(
 
     """
 
-    if not client_redis:
-        pool = aioredis.ConnectionPool.from_url(
-            "redis://localhost",
-            port=6379,
-            db=0,
-            protocol=3,
-            decode_responses=True,
+    try:
+
+        if not client_redis:
+            pool = aioredis.ConnectionPool.from_url(
+                "redis://localhost",
+                port=6379,
+                db=0,
+                protocol=3,
+                decode_responses=True,
+            )
+            client_redis: object = aioredis.Redis.from_pool(pool)
+
+        if not redis_channels:
+
+            from utilities.system_tools import get_config_tomli
+
+            # registering strategy config file
+            file_toml = "config_strategies.toml"
+
+            # parsing config file
+            config_app = get_config_tomli(file_toml)
+
+            # get redis channels
+            redis_channels: dict = config_app["redis_channels"][0]
+
+        if purpose == "sqlite_record_updating":
+            channel: str = redis_channels["sqlite_record_updating"]
+            message["params"].update({"channel": channel})
+
+        await publishing_result(
+            client_redis,
+            message,
         )
-        client_redis: object = aioredis.Redis.from_pool(pool)
 
-    if not redis_channels:
 
-        from utilities.system_tools import get_config_tomli
+    except Exception as error:
 
-        # registering strategy config file
-        file_toml = "config_strategies.toml"
+        await system_tools.parse_error_message_with_redis(
+            client_redis,
+            error,
+            )
 
-        # parsing config file
-        config_app = get_config_tomli(file_toml)
-
-        # get redis channels
-        redis_channels: dict = config_app["redis_channels"][0]
-
-    if purpose == "sqlite_record_updating":
-        channel: str = redis_channels["sqlite_record_updating"]
-        message["params"].update({"channel": channel})
-
-    await publishing_result(
-        client_redis,
-        channel,
-        message,
-    )

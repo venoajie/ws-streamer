@@ -1,28 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import datetime
 import os
 import signal
 import sys
-from functools import lru_cache, wraps
-from time import sleep
-
-# https://python.plainenglish.io/five-python-wrappers-that-can-reduce-your-code-by-half-af775feb1d5
-
-
-def get_ttl_hash(seconds=5):
-    """Calculate hash value for TTL caching.
-
-    Args:
-        seconds (int, optional): Expiration time in seconds. Defaults to 3600.
-
-    Returns:
-        int: Hash value.
-    """
-    utime = datetime.datetime.now().timestamp()
-    return round(utime / (seconds + 1))
-
+import orjson
 
 def convert_size(size_bytes):
     """Convert bytes to human readable format."""
@@ -46,43 +28,6 @@ def get_file_size():
     file_path = "error.log"
     size_bytes = convert_size(os.path.getsize(file_path))
     print(f"{file_path} file size: {size_bytes} bytes")
-
-
-def ttl_cache(ttl_seconds=5):
-    """A decorator for TTL cache functionality.
-
-    https://kioku-space.com/en/python-ttl-cache-with-toggle/
-
-    Args:
-        ttl_seconds (int, optional): Expiration time in seconds. Defaults to 3600.
-    """
-
-    def ttl_cache_deco(func):
-        """Returns a function with time-to-live (TTL) caching capabilities."""
-
-        # Function with caching capability and dummy argument
-        @lru_cache(maxsize=None)
-        def cached_dummy_func(*args, ttl_dummy, **kwargs):
-            del ttl_dummy  # Remove the dummy argument
-            return func(*args, **kwargs)
-
-        # Function to input the hash value into the dummy argument
-        @wraps(func)
-        def ttl_cached_func(*args, **kwargs):
-            hash = get_ttl_hash(ttl_seconds)
-            return cached_dummy_func(*args, ttl_dummy=hash, **kwargs)
-
-        return ttl_cached_func
-
-    return ttl_cache_deco
-
-
-@ttl_cache(ttl_seconds=5)
-def get_content():
-    return "AAAAAAAAAAAAA"
-
-
-print(get_content())
 
 
 def get_platform() -> str:
@@ -262,35 +207,6 @@ def provide_path_for_file(
     )
 
 
-def is_current_file_running(script: str) -> bool:
-    """
-    Check current file is running/not. Could be used to avoid execute an already running file
-
-    Args:
-        script (str): name of the file
-
-    Returns:
-        Bool: True, file is running
-
-    References:
-        https://stackoverflow.com/questions/788411/check-to-see-if-python-script-is-running
-    """
-    import psutil
-
-    for q in psutil.process_iter():
-
-        if q.name().startswith("python") or q.name().startswith("py"):
-            if (
-                len(q.cmdline()) > 1
-                and script in q.cmdline()[1]
-                and q.pid != os.getpid()
-            ):
-                # print("'{}' Process is already running".format(script))
-                return True
-
-    return False
-
-
 def reading_from_db_pickle(
     end_point,
     instrument: str = None,
@@ -307,69 +223,6 @@ def reading_from_db_pickle(
         )
     )
 
-
-def sleep_and_restart_program(idle: float = None) -> None:
-    """
-
-    Halt the program for some seconds and restart it
-
-    Args:
-        idle (float): seconds of the program halted before restarted.
-        None: restart is not needed
-
-    Returns:
-        None
-
-    """
-
-    if idle != None:
-        print(f" sleep for {idle} seconds")
-        sleep(idle)
-
-    print(f"restart")
-    python = sys.executable
-    os.execl(
-        python,
-        python,
-        *sys.argv,
-    )
-
-
-async def sleep_and_restart(idle: float = None) -> None:
-    """
-
-    Halt the program for some seconds and restart it
-
-    Args:
-        idle (float): seconds of the program halted before restarted.
-        None: restart is not needed
-
-    Returns:
-        None
-
-    """
-
-    if idle != None:
-        print(f" sleep for {idle} seconds")
-        await asyncio.sleep(idle)
-
-    print(f"restart")
-    python = sys.executable
-    os.execl(python, python, *sys.argv)
-
-
-def exception_handler(func):
-    # https://python.plainenglish.io/five-python-wrappers-that-can-reduce-your-code-by-half-af775feb1d5
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            # Handle the exception
-            print(f"An exception occurred: {str(e)}")
-            # Optionally, perform additional error handling or logging
-            # Reraise the exception if needed
-
-    return wrapper
 
 
 def parse_error_message(
@@ -392,93 +245,52 @@ def parse_error_message(
 
     from loguru import logger as log
 
-    info = f"{error} \n \n {traceback.format_exc()}"
+    info = f"{error} \n \n {traceback.format_exception(error)}"
 
     if message != None:
-        info = f"{message} \n \n {error} \n \n {traceback.format_exc()}"
+        info = f"{message} \n \n {error} \n \n {traceback.format_exception(error)}"
 
-    log.add(
-        "error.log", backtrace=True, diagnose=True
-    )  # Caution, may leak sensitive data in prod
+    #log.add(
+    #    "error.log", backtrace=True, diagnose=True
+    #)  # Caution, may leak sensitive data in prod
 
     log.critical(f"{info}")
 
     return info
 
 
-def raise_error_message(
+async def parse_error_message_with_redis(
+    client_redis: object,   
     error: str,
-    idle: float = None,
     message: str = None,
-) -> None:
+) -> str:
     """
 
-    Capture & emit error message
-    Optional: Send error message to telegram server
-
-    Args:
-        idle (float): seconds of the program halted before restarted. None: restart is not needed
-        message (str): error message
-
-    Returns:
-        None
-
-    Reference:
-        https://medium.com/pipeline-a-data-engineering-resource/prettify-your-python-logs-with-loguru-a7630ef48d87
-
     """
+    
+    from ws_streamer.utilities import string_modification as str_mod
 
-    info = parse_error_message(error, message)
+    info = parse_error_message(error,
+                               message,
+                               )
+    
+    channel = "error"
+    
+    result: dict = str_mod.message_template()
+    
+    pub_message = dict(
+                                data=info,
+                            )
 
-    if error == True:  # to respond 'def is_current_file_running'  result
-        sys.exit(1)
-
-    if idle == None:
-        info = f"{error}"
-
-    if idle != None:
-        sleep_and_restart_program(idle)
-
-    else:
-        sys.exit()
-
-    return info
+    result["params"].update({"channel": channel})
+    result["params"].update(pub_message)
 
 
-async def async_raise_error_message(
-    error: str,
-    idle: float = None,
-    message: str = None,
-) -> None:
-    """
-
-    Capture & emit error message
-    Optional: Send error message to telegram server
-
-    Args:
-        idle (float): seconds of the program halted before restarted. None: restart is not needed
-        message (str): error message
-
-    Returns:
-        None
-
-    Reference:
-        https://medium.com/pipeline-a-data-engineering-resource/prettify-your-python-logs-with-loguru-a7630ef48d87
-
-    """
-
-    info = parse_error_message(error, message)
-
-    if error == True:  # to respond 'def is_current_file_running'  result
-        sys.exit(1)
-
-    if idle != None:
-        await sleep_and_restart(idle)
-
-    else:
-        sys.exit()
-
-    return info
+    # publishing message
+    await client_redis.publish(
+        channel,
+        orjson.dumps(message),
+    )
 
 
 def check_file_attributes(filepath: str) -> None:
@@ -509,72 +321,6 @@ def check_file_attributes(filepath: str) -> None:
     return os.stat(filepath)
 
 
-def ipdb_sys_excepthook():
-    """
-    https://oscar-savolainen.medium.com/my-favourite-python-snippets-794d5653af38
-    When called this function will set up the system exception hook.
-        This hook throws one into an ipdb breakpoint if and where a system
-        exception occurs in one's run.
-
-        Example usage:
-        >>> ipdb_sys_excepthook()
-    """
-
-    import sys
-    import traceback
-
-    import ipdb
-
-    def info(type, value, tb):
-        """
-        System excepthook that includes an ipdb breakpoint.
-        """
-        if hasattr(sys, "ps1") or not sys.stderr.isatty():
-            # we are in interactive mode or we don't have a tty-like
-            # device, so we call the default hook
-            sys.__excepthook__(type, value, tb)
-        else:
-            # we are NOT in interactive mode, print the exception...
-            traceback.print_exception(type, value, tb)
-            print
-            # ...then start the debugger in post-mortem mode.
-            # pdb.pm() # deprecated
-            ipdb.post_mortem(tb)  # more "modern"
-
-    sys.excepthook = info
-
-
-def kill_process(process_name):
-    """_summary_
-
-    Args:
-        process_ (str): _description_
-
-    Returns:
-        _type_: _description_
-
-        https://www.geeksforgeeks.org/kill-a-process-by-name-using-python/
-    """
-
-    import signal
-
-    try:
-
-        # iterating through each instance of the process
-        for line in os.popen("ps ax | grep " + process_name + " | grep -v grep"):
-            fields = line.split()
-
-            # extracting Process ID from the output
-            pid = fields[0]
-
-            # terminating process
-            os.kill(int(pid), signal.SIGKILL)
-        print("Process Successfully terminated")
-
-    except:
-        print("Error Encountered while running script")
-
-
 async def back_up_db(idle_time: int):
 
     from db_management.sqlite_management import back_up_db_sqlite
@@ -600,15 +346,6 @@ async def back_up_db(idle_time: int):
 
         await asyncio.sleep(idle_time)
 
-
-def main():
-    print("Everything is going swimmingly")
-    raise NotImplementedError("Oh no what happened?")
-
-
-if __name__ == "__main__":
-    ipdb_sys_excepthook()
-    main()
 
 
 class SignalHandler:
@@ -640,6 +377,7 @@ def handle_ctrl_c() -> None:
 
 def get_config_tomli(file_name: str) -> list:
     """ """
+
     import tomli
 
     config_path = provide_path_for_file(file_name)
